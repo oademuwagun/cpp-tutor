@@ -1,0 +1,28 @@
+CPP Tutor
+====================
+
+This is a tool that enables C++ beginners to visualize the step-by-step execution of their code.
+It helps them to see the creation of the data, the various forms of the data, the manipulation and destruction of data during run-time.
+
+The goal is for this tool to be the quivalent of the Online Python Tutor (www.pythontutor.com).
+
+Currently, the tool supports the following features:
+
+- Visualization of primitive types, strings, and arrays
+- Visualization of the call stack
+
+I am currently working on adding several new features:
+
+
+
+Set Up
+------------
+
+- Ensure you have Python installed (just to be safe, use 2.7).
+
+- Ensure you have gdb installed and that the gdb version installed supports Python scripting. 
+
+- 
+
+
+
