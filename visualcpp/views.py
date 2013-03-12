@@ -7,6 +7,7 @@ from data_structures import Variable, Object, Frame, State, DataEncoder
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
+
 EXECUTABLE_FILE_NAME = "code"
 SOURCE_FILE_NAME = EXECUTABLE_FILE_NAME+".cpp"
 RESULT_FILE_NAME = "result"
@@ -20,15 +21,17 @@ def execute(request):
 		if "code" in request.POST:
 			code = request.POST.get("code").strip()
 			
+			#Save the code input in a file
 			with open(SOURCE_FILE_NAME, "w") as source_file:
 				source_file.write(code) 
 
+			#Compile the code and retrieve the errors if any
 			command_string = "g++ -g %s -o %s" %(SOURCE_FILE_NAME, EXECUTABLE_FILE_NAME) 
 			process = sub.Popen(command_string, stdin=sub.PIPE, stdout=sub.PIPE, stderr=sub.PIPE, shell=True)
 			output, errors = process.communicate()
-			errors = errors.splitlines() #Convert the error string to a list
+			errors = errors.splitlines() 
 
-			#If there are no errors, run the code and analyze
+			#If there are no errors, run, analyze the code and return the results to the user.
 			if len(errors) == 0 :
 				return_code = sub.call("./analyze.py", stdin=sub.PIPE, stdout=sub.PIPE, stderr=sub.PIPE, shell=True) 
 

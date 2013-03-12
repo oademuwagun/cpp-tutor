@@ -1,17 +1,12 @@
 import json
 #import gdb
 
+""" Codes for some data types """
 TYPE_CODE_CHAR = 20
 TYPE_CODE_ARRAY = 2
 
-class DataEncoder(json.JSONEncoder):
-	def default(self, obj):
-		if isinstance(obj, Data) or isinstance(obj, Frame) or isinstance(obj, State):
-			if isinstance(obj, Variable):
-				obj.clean_up_data()
-			return vars(obj) #All the variables and their values.
-		return json.JSONEncoder.default(self, obj)
 
+""" Super class for variables and objects """
 class Data(object):
 	def __init__(self, type=None, address=None):
 		self.type = type
@@ -132,16 +127,16 @@ class Variable(Data):
 			self.value=None
 		else:
 			self.value = self.value_string
-
+"""
 	def is_uninitialized(self):
 		if self.__raw_address and len(str(self.__raw_address).split()) == 1:
 			return False
-		return True
+		return True """
 
 	def raw_address(self):
 		return self.__raw_address
 
-
+""" Represents complex data structures such as arrays, classes, strings, etc """
 class Object(Data):
 	def __init__(self, type=None, address=None, members=[]):
 		Data.__init__(self, type, address)
@@ -149,11 +144,14 @@ class Object(Data):
 		self.members = members if members!=None else [] #list of variables in the object
 
 
+""" Represents an item in the call stack """
 class Frame:
 	def __init__(self, name=None, variables=[]):
 		self.name = name
 		self.variables = variables if variables!=None else []
 
+
+""" Represent the state at each step of execution """
 class State:
 	"""Had an issue with having an objects optional paramter"""
 	def __init__(self, line_num, globals=[], frames=[]):
@@ -165,3 +163,13 @@ class State:
 
 		self.return_value = None #Applicable to only the return type state
 		self.is_return_state = True #true if a function returns in the state
+
+
+""" Custom encoder for all the objects """
+class DataEncoder(json.JSONEncoder):
+	def default(self, obj):
+		if isinstance(obj, Data) or isinstance(obj, Frame) or isinstance(obj, State):
+			if isinstance(obj, Variable):
+				obj.clean_up_data()
+			return vars(obj) #All the variables and their values.
+		return json.JSONEncoder.default(self, obj)

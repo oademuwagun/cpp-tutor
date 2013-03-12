@@ -11,18 +11,40 @@ Currently, the tool supports the following features:
 - Visualization of primitive types, strings, and arrays
 - Visualization of the call stack
 
-I am currently working on adding several new features:
+This is a new project so it is lacking a lot of key features. However, I am currently working on adding several new features such as:
 
+- User interface enhancements such as the current line indicator
+- Visualization of structs, enums, and unions
+
+
+
+Pre-requisites
+----------------
+
+- Python (just to be safe, use 2.7).
+
+- gdb with support for Python scripting. 
+
+- Django 1.5 and higher
 
 
 Set Up
-------------
+---------
 
-- Ensure you have Python installed (just to be safe, use 2.7).
+- Change the first of the analyze.py ("#!/usr/bin/gdb -x") to "[GDB INSTALL DIR] -x"
 
-- Ensure you have gdb installed and that the gdb version installed supports Python scripting. 
+- Go to the project directory, run "python manage.py runserver [PORT_NUMBER]." If a PORT_NUMBER is not specified, it defaults to 8000.
 
-- 
 
+How It Works
+--------------
+
+- The user enters and submits C++ code as input.
+
+- Once the code is submitted, it is handled by the Django app at the backend. 
+
+- The code is then compiled. If there are errors, the errors are then displayed to the user.
+
+- If there are no errors, the code is then executed. The results are compiled.
 
 
