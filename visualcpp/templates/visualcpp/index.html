@@ -1,0 +1,161 @@
+<html>
+	<head>
+		{% load staticfiles %}
+		<link rel="stylesheet" href="{% static "css/bootstrap.css" %}" type="text/css" media="screen" />
+		<link rel="stylesheet" href="{% static "css/codemirror.css" %}" type="text/css" media="screen" />
+		<link rel="stylesheet" href="{% static "css/docs.css" %}" type="text/css" media="screen" />
+		<link rel="stylesheet" href="{% static "css/custom.css" %}" type="text/css" media="screen" />
+
+		<script src="{% static "js/codemirror.js" %}"></script>
+		<script src="{% static "js/clike.js" %}"></script>
+		<script src="{% static "js/active-line.js" %}"></script>
+		<script src="{% static "js/jquery.js" %}"></script>
+		<script src="{% static "js/handlebars.js" %}"></script>
+	</head>
+	<body>
+		<div class="container">
+			<div class="row">
+				<h1> Visual C++ </h1>
+			</div>
+			<div class="row">
+				<div class="span5">
+					<div id="code-section">
+						<form action="/execute/" method="post">
+							{% csrf_token %}
+							<textarea id="code" name="code" class="hide">{% if code %}{{ code }}{% else %}Please enter your code here{% endif %}</textarea>
+							{% if result_size and result_size > 0 %}
+								<p style="text-align:center"> 
+									Step <span id="current-step">1</span> of {{result_size}} 
+								</p>
+							{% endif %}
+							<div class="control-group" style="margin-top: 10px;">
+								<button class="btn" id="step-backward-button">Back</button>
+								<button type="submit" class="btn">Submit</button>
+								<button class="btn" id="step-forward-button">Forward</button>
+							</div>
+						</form>
+					</div>
+
+					<!-- output-section -->
+
+					<div id="output-section">
+						<ul class="nav nav-tabs">
+						  <li class="active"><a href="#output" data-toggle="tab">Output</a></li>
+						  <li>
+						  	<a href="#error" data-toggle="tab">
+						  		Error
+						  		{% if errors  and errors|length > 0 %} 
+							  		<span class="badge badge-warning"> {{ errors|length }}</span>
+						  		{% endif %}
+						  	</a>
+						  </li>
+						</ul>		
+
+						<div class="tab-content">
+							<div class="tab-pane active" id="output">
+								<ul class="striped-list">
+									{% if output %}
+										{% for line in output %}
+											<li> {{ line }} </li>
+										{% endfor %}
+									{% endif %}
+								</ul>
+							</div>
+							<div class="tab-pane" id="error">
+								<ul class="striped-list">
+									{% if errors %}
+										{% for error in errors %}
+											<li> {{ error }} </li>
+										{% endfor %}
+									{% endif %}
+								</ul>
+							</div>
+						</div>			
+					</div>
+				</div> <!-- SPAN 7 -->
+				
+				<div class="span7">
+					<div id="visualization-section">
+
+						{% if visualization %}
+							<div class="hide" id="visualization-result">{{ visualization }}</div>
+						{% endif %}
+
+						<div id="visualization-panel" class="hide clearfix">
+						</div>
+					</div>
+				</div>
+
+			</div>
+		</div>
+
+		<div id="container-templates" class="hide">
+			<div id="globals-and-frame-section-template">
+				<div id="globals-and-frame-section" class="pull-left">
+					<div id="global-variable-container">
+						<div id="global-variables-header">Global Variables</div>
+					</div>
+					<div id="frame-container">
+						<div id="frame-container-header">Frames</div>
+					</div>
+				</div>
+			</div>
+			<div id="objects-section-template">
+				<div id="objects-section" class="pull-left">
+					<div id="objects-container">
+						<!-- Will come up with a better name -->
+						<div id="object-container-header"> Objects </div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script src="{% static "js/bootstrap-tab.js" %}"></script>
+		<script>
+			var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+			  mode: "text/x-c++src",
+			  styleActiveLine: true,
+			  lineNumbers: true,
+			});
+		</script>
+		{% verbatim %}
+			<script id="array-object-template" type="text/x-handlebars-template">
+				<div class="array">
+					<div class="object-name no-overflow">{{name}}</div>
+					<div class="clearfix">
+						{{#each members}}
+							<div class="array-element pull-left" address="{{address}}">
+								{{value}}
+							</div>
+						{{/each}}
+					</div>
+				</div>
+			</script>
+			<script id="string-object-template" type="text/x-handlebars-template">
+				<div class="string">
+					<div class="object-name no-overflow">{{name}}</div>
+					<div class="clearfix">
+						{{#each members}}
+							<div class="string-element pull-left" address="{{address}}">
+								{{value}}
+							</div>
+						{{/each}}
+					</div>
+				</div>
+			</script>
+			<script id="frame-template" type="text/x-handlebars-template">
+				<div class="frame">
+					<div class="frame-name no-overflow">{{name}}</div>
+				</div>
+			</script>
+			<script id="variable-template" type="text/x-handlebars-template">
+				<div class="variable clearfix">
+					<div class="variable-value no-overflow pull-right">{{value}}</div>
+					<div class="variable-name no-overflow">{{name}}</div>
+				</div>
+			</script>
+		{% endverbatim %}
+		<script src="{% static "js/app.js" %}"></script>
+		
+	</body>
+</html>
