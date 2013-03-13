@@ -1,13 +1,14 @@
 #include<iostream>
 #include<string>
-
+ 
 using namespace std;
+/* Replace a's with b's */
 
 int main(){
-  float a = 2.4;
-  string b = "SDSD"; 
-  string* ptr = &b;
-  string** ptr2 = &ptr;
-  int k = 0;
+  
+  string word = "soccer";
+    
+  int i = 2;
+  
   return 0;
 }

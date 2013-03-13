@@ -63,6 +63,7 @@ ul.striped-list{
 
 .variable-value{
 	width: 50px;
+	min-height: 15px;
 	padding: 2px;
 	margin-left: 5px;
 	border-bottom: 1px solid #a6b3b6;

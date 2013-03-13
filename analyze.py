@@ -35,10 +35,7 @@ def add_current_state():
 			for frame in current_state.frames:
 				for variable in frame.variables:
 					print variable.name
-					#print variable.is_uninitialized()
-					print variable.raw_address()
-					print variable.is_reference_type
-					if variable.is_reference_type and variable.reference:
+					if variable.reference != None:
 						current_state.objects.append( variable.reference )
 
 			states.append(current_state)
@@ -61,6 +58,7 @@ def get_current_frames():
 	if newest_frame.name() != "main" and CustomFinishBreakpoint.frame_has_finish_bp(newest_frame):
 			CustomFinishBreakpoint(current_frame) #set breakpoint on current frame
 	return frames
+
 
 """ Gets all the variables in a frame """
 def get_frame_variables(frame, block):

@@ -1,14 +1,12 @@
 import json
-import gdb
+#import gdb
 
-class DataEncoder(json.JSONEncoder):
-	def default(self, obj):
-		if isinstance(obj, Data) or isinstance(obj, Frame) or isinstance(obj, State):
-			if isinstance(obj, Variable):
-				obj.clean_up_data()
-			return vars(obj) #All the variables and their values.
-		return json.JSONEncoder.default(self, obj)
+""" Codes for some data types """
+TYPE_CODE_CHAR = 20
+TYPE_CODE_ARRAY = 2
 
+
+""" Super class for variables and objects """
 class Data(object):
 	def __init__(self, type=None, address=None):
 		self.type = type
@@ -19,143 +17,124 @@ class Variable(Data):
 		Data.__init__(self, type, address)
 		self.name = name
 		self.reference = None
-		self.__raw_address = self.address = None
-		self.__raw_value = self.value = None
+		self.address = str(value.address).split()[0] if value else None
+		self.reference_address = None
+		self.value = None
 		self.is_return_value = is_return_value
-		self.is_reference_type = False
 
-		try:
-			self.__set_value(value)
-			self.__set_address()
-
-			if self.__is_a_reference():
-				self.is_reference_type = True
-				print "Setting reference"
-				try:
-					self.__set_reference()
-					self.value = None #self.address
-				except:
-					#self.reference = None
-					self.value = None
-				print "Reference"
-		except:
-			pass
-			return			
+		self.__set_value(value)
+		#self.__set_address()
+		self.__set_reference(value)
 
 	def __set_value(self, val):
-		print self.type
 		if val != None:
-			if self.type==gdb.TYPE_CODE_CHAR and val != None:
+			#Using the type code comparisons was not working for some reason.
+			#So I used this method to determine the types
+			if str(self.type)=="char" and val != None:
 				self.value = str(val).split()[-1]
-			elif self.type=="std::string":
-				self.value = self.get_string_value(val)
 			else:
-				self.value = val
+				self.value = str(val)
 		else:
-			self.value = val
+			self.value = None
 
-	def __set_address(self):
-		if self.value != None:
+	def __set_address(self, value):
+		if value != None:
 			if self.type == "std::string":
-				self.__raw_address = self.address = self.value[0].address
-				print "Okay"
-				print self.name
+				string_val = String.get_string_value(value)
+				self.address = str(string_val[0].address).split()[0]
 			else:
-				print "Wood"
-				print self.name
-				self.__raw_address = self.address = self.value.address
+				self.address = str(value.address).split()[0]
 		else:
-			print "DSDF"
-			print self.name
-			self.__raw_address = self.address = None			
-
-	def __is_a_reference(self):
-		reference_types = [gdb.TYPE_CODE_ARRAY]
-		if str(self.type) == "std::string" or self.type.code in reference_types:
-			return True
-		else:
-			return False
-
-	def __set_reference(self):
-		if self.value.type.code == gdb.TYPE_CODE_ARRAY:
-			self.reference = self.convert_to_array()
-		elif str(self.value.type) == "std::string":
-			self.reference = self.convert_to_string()
+			self.address = None			
 
 
-	def convert_to_array(self):
+	def __set_reference(self, value):
+		if self.type.code == TYPE_CODE_ARRAY:
+			self.reference = Array(name=self.name, value=value)
+			self.value=None
+		elif str(self.type) == "std::string":
+			string_val = String.get_string_value(value)
+			string_address = str(string_val).split()[0]
+			if string_address == "0x0": 
+				self.reference = None
+			else:
+				self.reference = String(name=self.name, value=value)
+			self.value = None
+
+
+""" Represents complex data structures such as arrays, classes, strings, etc """
+class Object(Data):
+	def __init__(self, type=None, name=None, value=None):
+		Data.__init__(self, type=type, address=None)
+		self.name = name if name else ""
+		#self.address =  str(address).split()[0] if address else 
+		self.members = [] #list of variables in the object
+		
+
+class String(Object):
+	def __init__(self, name=None, value=None):
+		Object.__init__(self,  "string", name, value)
+		self.__set_members(value)
+		self.__set_address(value)
+
+	@classmethod
+	def get_string_value(self, value):
+		return value['_M_dataplus']['_M_p']
+
+	def __set_members(self, value):
+		#'value_string' is in this format: [ADDRESS] [VALUE]
+		#If the string has not been asigned memory. Its address is NULL (0X0)
+		string_val = self.get_string_value(value)
+		string_address = str(string_val).split()[0]
+
+		#The value when converted to a string is in this format: [ADDRESS] [ACTUAL STRING]. 
+		#We obtain the string's length using only the actual string portion
+		#Decrement by 2 to account for the enclosing quotes
+
+		#=== Big flaw in this approach ==========#
+		string_length = len(str(string_val).split()[-1])-2 
+
+		self.members = [Variable(type=string_val.type.target(), name=self.name+"["+str(i)+"]",\
+			address=string_val[i].address, value=string_val[i]) \
+			for i in range(string_length) ]
+
+	def __set_address(self, value):
+		string_val = String.get_string_value(value)
+		self.address = str(string_val[0].address).split()[0]
+
+
+class Array(Object):
+	def __init__(self, name=None, value=None):
+		Object.__init__(self, "array", name, value)
+		self.__set_members(value)
+		self.__set_address(value)
+
+	def __set_members(self, value):
 		#Get array length. Current bootleg method. 
-		tmp = str(self.value.type).split()[-1]
+		tmp = str(value.type).split()[-1]
 		tmp = tmp.replace("[", "")
 		tmp = tmp.replace("]", "")
 		length = int(tmp)
 
-		array_items = [Variable(type=self.value.type.target(), name=self.name+"["+str(i)+"]", \
-			address=self.value[i].address, value=self.value[i]) \
+
+		self.members = [Variable(type=value.type.target(), name=self.name+"["+str(i)+"]", \
+			address=value[i].address, value=value[i]) \
 			for i in range(length) ]
 
-		return Object(type="array", address=self.address, members=array_items)
-
-	def get_string_value(self, value):
-		return value['_M_dataplus']['_M_p']
-
-	"""Permanently modifies values. So can't be meant to be called once"""
-	def convert_to_string(self):
-
-		#The value when converted to a string is in this format: [ADDRESS] [ACTUAL STRING]. 
-		#We obtain the string's length using only the actual string portion
-		string_length = len(str(self.value).split()[-1])
-
-		string_items = [Variable(type=self.value.type.target(), name=self.name+"["+str(i)+"]",\
-			address=self.value[i].address, value=self.value[i]) \
-			for i in range(string_length) ]
-
-		#Return string as an array of characters
-		return Object(type="string", address=self.address, members=string_items)
-
-	#Pre-processing for conversion to json. Unnecessary attributes are removed.
-	def clean_up_data(self):
-		self.type = str(self.type)
-		self.address = str(self.address).split()[0]
-
-		#Clear all raw values
-		self.__raw_value = self.__raw_address = None
-
-		"""Will have to review this when we start dealing with pointers"""
-
-		if self.is_reference_type:
-			if self.reference:
-				try:
-					self.reference = str(self.value.address).split()[0]
-				except:
-					print "DDASD"
-					self.reference =None
-			self.value=None
-		else:
-			self.value = str(self.value)
-
-	def is_uninitialized(self):
-		if self.__raw_address and len(str(self.__raw_address).split()) == 1:
-			return False
-		return True
-
-	def raw_address(self):
-		return self.__raw_address
+	def __set_address(self, value):
+		self.address = str(value.address).split()[0]
 
 
 
-class Object(Data):
-	def __init__(self, type=None, address=None, members=[]):
-		Data.__init__(self, type, address)
-		self.address = "" #str(address) if address else None
-		self.members = members if members!=None else [] #list of variables in the object
-
-
+""" Represents an item in the call stack """
 class Frame:
 	def __init__(self, name=None, variables=[]):
 		self.name = name
 		self.variables = variables if variables!=None else []
 
+
+
+""" Represent the state at each step of execution """
 class State:
 	"""Had an issue with having an objects optional paramter"""
 	def __init__(self, line_num, globals=[], frames=[]):
@@ -167,3 +146,14 @@ class State:
 
 		self.return_value = None #Applicable to only the return type state
 		self.is_return_state = True #true if a function returns in the state
+
+
+""" Custom encoder for all the objects """
+class DataEncoder(json.JSONEncoder):
+	def default(self, obj):
+		if isinstance(obj, Data) or isinstance(obj, Frame) or isinstance(obj, State):
+			if isinstance(obj,Data):
+				obj.type = str(obj.type)
+				pass #obj.clean_up_data()
+			return vars(obj) #All the variables and their values.
+		return json.JSONEncoder.default(self, obj)
